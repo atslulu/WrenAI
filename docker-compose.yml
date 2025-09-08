@@ -1,0 +1,50 @@
+version: '3.8'
+
+services:
+  wren-ai-service:
+    build:
+      context: ./wren-ai-service
+      dockerfile: Dockerfile
+    ports:
+      - "5555:5555"
+    environment:
+      - WREN_AI_SERVICE_PORT=5555
+      - WREN_UI_PORT=3000
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5555/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  wren-ui:
+    build:
+      context: ./wren-ui
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      - NEXT_PUBLIC_API_URL=http://wren-ai-service:5555
+      - PORT=3000
+    depends_on:
+      wren-ai-service:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # 如果需要資料庫，加入這個服務
+  postgres:
+    image: postgres:15
+    environment:
+      - POSTGRES_DB=wrenai
+      - POSTGRES_USER=wren
+      - POSTGRES_PASSWORD=password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+volumes:
+  postgres_data:
